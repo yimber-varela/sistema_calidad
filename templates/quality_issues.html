@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Quality Issues Summary</title>
+  <link rel="stylesheet" href="../static/style.css">
+  <style>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 8px;
+      text-align: center;
+      border: 1px solid #ccc;
+    }
+    th {
+      background-color: #005eb8;
+      color: white;
+    }
+    .contenedor {
+      text-align: center;
+      padding: 20px;
+      max-width: 1200px;
+      margin: auto;
+    }
+    .icon {
+      font-size: 18px;
+      cursor: pointer;
+    }
+    select.status-selector {
+      padding: 3px;
+      font-weight: bold;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="contenedor">
+    <h2>Quality Issues Summary</h2>
+
+    <button onclick="window.location.href='home.html'">🏠 Back to Home</button><br><br>
+
+    <table id="tabla-issues">
+      <thead>
+        <tr>
+          <th>Issue Nr</th>
+          <th>Report Nr</th>
+          <th>Activity Nr</th>
+          <th>Date</th>
+          <th>Description</th>
+          <th>System</th>
+          <th>Responsible</th>
+          <th>Status Quality</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script>
+    async function cargarIssuesReales() {
+      try {
+        const res = await fetch("http://localhost:5000/api/issues");
+        const data = await res.json();
+        const tbody = document.querySelector("#tabla-issues tbody");
+        tbody.innerHTML = "";
+
+        if (!Array.isArray(data) || data.length === 0) {
+          tbody.innerHTML = "<tr><td colspan='8'>No issues found.</td></tr>";
+          return;
+        }
+
+        data.forEach((item) => {
+          const statusColor = item.status === "OPEN" ? "red" : "green";
+
+          const fila = document.createElement("tr");
+          fila.innerHTML = `
+            <td>${item.issue_nr}</td>
+            <td>${item.rep_nr}</td>
+            <td>${item.activity_nr}</td>
+            <td>${item.date}</td>
+            <td>${item.description}</td>
+            <td>${item.system}</td>
+            <td><span class="icon" title="${item.email}" onclick="verResponsable('${item.email}')">🔍</span></td>
+            <td>
+              <select class="status-selector" onchange="cambiarEstado('${item.issue_nr}', this)" style="background-color:${statusColor};">
+                <option value="OPEN" ${item.status === "OPEN" ? "selected" : ""}>OPEN</option>
+                <option value="CLOSE" ${item.status === "CLOSE" ? "selected" : ""}>CLOSE</option>
+              </select>
+            </td>
+          `;
+          tbody.appendChild(fila);
+        });
+
+      } catch (err) {
+        console.error("❌ Error loading real issues:", err);
+        const tbody = document.querySelector("#tabla-issues tbody");
+        tbody.innerHTML = "<tr><td colspan='8'>❌ Failed to load issues from database.</td></tr>";
+      }
+    }
+
+    async function cambiarEstado(issueNr, select) {
+      const nuevoEstado = select.value;
+
+      await fetch(`http://localhost:5000/api/issues/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ issue_nr: issueNr, status: nuevoEstado }),
+      });
+
+      select.style.backgroundColor = nuevoEstado === "OPEN" ? "red" : "green";
+    }
+
+    function verResponsable(email) {
+      alert("Responsible: " + email);
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      cargarIssuesReales();
+    });
+  </script>
+</body>
+</html>
+
+
+
+
+

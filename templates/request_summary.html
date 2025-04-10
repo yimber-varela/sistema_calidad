@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>List of inspections requested</title>
+  <link rel="stylesheet" href="../static/style.css" />
+  <style>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 30px;
+    }
+    th, td {
+      padding: 8px;
+      text-align: center;
+      border: 1px solid #ccc;
+    }
+    th {
+      background-color: #005eb8;
+      color: white;
+    }
+    .icon {
+      cursor: pointer;
+      font-size: 18px;
+    }
+    .contenedor {
+      text-align: center;
+      max-width: 1300px;
+      margin: auto;
+      padding: 20px;
+    }
+    .grupo-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin: 30px 0 10px;
+      color: #003366;
+    }
+  </style>
+</head>
+<body>
+  <div class="contenedor">
+    <h2>List of inspections requested</h2>
+    <button onclick="window.location.href='home.html'">🏠 Back to Home</button>
+    <button onclick="window.location.href='inspections_ongoing.html'">📍 Go to inspections on going</button>
+    <br><br>
+    <div id="grupos-contenedor"></div>
+  </div>
+
+  <script>
+    function formatearGrupoEnvio(timestamp) {
+      const fecha = new Date(Number(timestamp));
+      return fecha.toLocaleString("en-GB");
+    }
+
+    function verPDF(inspeccion) {
+      sessionStorage.setItem("reporte_previsualizado", JSON.stringify(inspeccion));
+      window.location.href = "preview_report.html";
+    }
+
+    async function cargarSolicitudes() {
+      try {
+        const res = await fetch("http://localhost:5000/api/solicitudes");
+        const data = await res.json();
+
+        const enviadas = data.filter(item => item.grupo_envio);
+        const grupos = {};
+
+        for (const item of enviadas) {
+          const grupo = item.grupo_envio;
+          if (!grupos[grupo]) grupos[grupo] = [];
+          grupos[grupo].push(item);
+        }
+
+        const contenedor = document.getElementById("grupos-contenedor");
+        contenedor.innerHTML = "";
+
+        const ordenados = Object.entries(grupos).sort((a, b) => Number(b[0]) - Number(a[0]));
+
+        for (const [grupo, items] of ordenados) {
+          const bloque = document.createElement("div");
+          bloque.innerHTML += `<div class="grupo-title">📦 Group Sent: ${formatearGrupoEnvio(grupo)}</div>`;
+
+          const tabla = document.createElement("table");
+          tabla.innerHTML = `
+            <thead>
+              <tr>
+                <th>Activity Nr</th>
+                <th>Report Nr</th>
+                <th>Block</th>
+                <th>Section</th>
+                <th>Scope</th>
+                <th>Send To</th>
+                <th>Kind of Inspection</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Meeting Point</th>
+                <th>Attach Doc.</th>
+                <th>Additional Information</th>
+                <th>Status</th>
+                <th>Execute</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map(item => `
+                <tr>
+                  <td>${item.act}</td>
+                  <td>${item.rep}</td>
+                  <td>${item.block}</td>
+                  <td>${item.section}</td>
+                  <td>${item.scope}</td>
+                  <td>${item.email}</td>
+                  <td>${item.kind}</td>
+                  <td>${item.date}</td>
+                  <td>${item.time}</td>
+                  <td>${item.meeting}</td>
+                  <td>${item.attach || "-"}</td>
+                  <td>${item.additional_info || "-"}</td>
+                  <td id="status-${item.rep}">${item.status || "not started"}</td>
+                  <td><span class="icon" onclick='verPDF(${JSON.stringify(item)})'>🖨️</span></td>
+                </tr>
+              `).join("")}
+            </tbody>
+          `;
+          bloque.appendChild(tabla);
+          contenedor.appendChild(bloque);
+        }
+
+      } catch (err) {
+        console.error("❌ Error loading inspections summary:", err);
+        document.getElementById("grupos-contenedor").innerText = "Failed to load inspections.";
+      }
+    }
+
+    // 🔄 Recibir mensajes de reportes.html para actualizar status visualmente
+    window.addEventListener("message", (event) => {
+      const data = event.data;
+      if (data.tipo === "actualizar_status" && data.rep && data.status) {
+        const celda = document.getElementById(`status-${data.rep}`);
+        if (celda) celda.textContent = data.status;
+      }
+    });
+
+    document.addEventListener("DOMContentLoaded", () => {
+      if (!localStorage.getItem("usuario_logueado")) {
+        alert("Access denied. Please log in.");
+        window.location.href = "login.html";
+        return;
+      }
+
+      cargarSolicitudes();
+    });
+  </script>
+</body>
+</html>
+
+
+
+

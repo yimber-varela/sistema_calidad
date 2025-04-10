@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Inspection Reports Summary</title>
+  <link rel="stylesheet" href="../static/style.css" />
+  <style>
+    .fila-done { background-color: #d4f8d4; }
+    .fila-cancelled { background-color: #f8d4d4; }
+    .fila-inprogress { background-color: #fff6cc; }
+    .icon { cursor: pointer; font-size: 18px; }
+    .contenedor { max-width: 1200px; margin: auto; padding: 20px; }
+    th { background-color: #005eb8; color: white; }
+    table { width: 100%; border-collapse: collapse; }
+    td, th { padding: 8px; text-align: center; border: 1px solid #ccc; }
+    select.status-selector { width: 100%; padding: 3px; }
+    .issued-yes { color: green; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="contenedor">
+    <h2>Inspection Reports Summary</h2>
+    <button onclick="window.location.href='home.html'">🏠 Back to Home</button><br><br>
+
+    <h3>Report List</h3>
+    <table id="tabla-reportes">
+      <thead>
+        <tr>
+          <th>Select</th>
+          <th>Report Nr</th>
+          <th>Activity Nr</th>
+          <th>Issued Report</th>
+          <th>Date</th>
+          <th>Scope</th>
+          <th>Kind of Inspection</th>
+          <th>Inspection Report</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <button onclick="eliminarSeleccionados()">🗑️ Delete Selected Reports</button>
+  </div>
+
+  <script>
+    async function loadReports() {
+      const res = await fetch("http://localhost:5000/api/reportes");
+      const data = await res.json();
+
+      const tbody = document.querySelector("#tabla-reportes tbody");
+      tbody.innerHTML = "";
+
+      for (const r of data) {
+        const estado = (r.status || "not started").toLowerCase();
+        const issued = r.issued ? `<span class="issued-yes">YES</span>` : "NO";
+
+        let clase = "fila-inprogress";
+        if (estado === "done") clase = "fila-done";
+        if (estado === "cancelled") clase = "fila-cancelled";
+
+        const mostrarLupa = ["done", "cancelled", "not applicable"].includes(estado);
+
+        const fila = document.createElement("tr");
+        fila.className = clase;
+
+        fila.innerHTML = `
+          <td><input type="checkbox" class="checkbox-reporte" data-id="${r.id}"></td>
+          <td>${r.rep}</td>
+          <td>${r.act}</td>
+          <td>${issued}</td>
+          <td>${r.date}</td>
+          <td>${r.scope}</td>
+          <td>${r.kind}</td>
+          <td>
+            ${mostrarLupa ? `<span class="icon" onclick='editarReporte(${JSON.stringify(r)})'>🔍</span>` : "-"}
+          </td>
+          <td>
+            <select class="status-selector" onchange="cambiarEstado(${r.id}, '${r.rep}', this.value)">
+              <option ${estado === "not started" ? "selected" : ""}>not started</option>
+              <option ${estado === "in progress" ? "selected" : ""}>in progress</option>
+              <option ${estado === "done" ? "selected" : ""}>done</option>
+              <option ${estado === "cancelled" ? "selected" : ""}>cancelled</option>
+              <option ${estado === "not applicable" ? "selected" : ""}>not applicable</option>
+            </select>
+          </td>
+        `;
+        tbody.appendChild(fila);
+      }
+    }
+
+    function editarReporte(reporte) {
+      fetch("http://localhost:5000/api/reportes/contenido/" + reporte.rep)
+        .then(res => res.json())
+        .then(data => {
+          const paquete = {
+            ...reporte,
+            contenido: data.contenido || ""
+          };
+          sessionStorage.setItem("reporte_editar", JSON.stringify(paquete));
+          window.location.href = "editar_reporte.html";
+        });
+    }
+
+    async function cambiarEstado(id, rep, nuevoEstado) {
+      await fetch(`http://localhost:5000/api/reportes/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nuevoEstado }),
+      });
+
+      await fetch("http://localhost:5000/api/test_plan/status", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rep, status: nuevoEstado }),
+      });
+
+      // 🔁 Enviar evento a test_plan.html y request_summary.html si están abiertas
+      window.parent.postMessage({ tipo: "actualizar_status", rep, status: nuevoEstado }, "*");
+
+      loadReports(); // Refrescar visual
+    }
+
+    async function eliminarSeleccionados() {
+      const seleccionadas = Array.from(document.querySelectorAll(".checkbox-reporte:checked"))
+        .map(cb => cb.dataset.id);
+
+      if (seleccionadas.length === 0) return alert("Select at least one report to delete.");
+
+      const confirmacion = confirm(`Are you sure you want to delete ${seleccionadas.length} reports?`);
+      if (!confirmacion) return;
+
+      await fetch("http://localhost:5000/api/reportes", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: seleccionadas }),
+      });
+
+      loadReports();
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      loadReports();
+    });
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+

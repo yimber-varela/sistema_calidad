@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Preview Report</title>
+  <link rel="stylesheet" href="../static/style.css">
+  <style>
+    #preview {
+      margin: 40px auto;
+      padding: 20px;
+      max-width: 800px;
+      border: 1px solid #ccc;
+      background-color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="contenedor">
+    <h2>📄 Preview of Inspection Report</h2>
+    <button onclick="window.location.href='home.html'">🏠 Back to Home</button>
+    <div id="preview">Loading preview...</div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      const datos = localStorage.getItem("reporte_previsualizado");
+      if (!datos) {
+        alert("No report selected.");
+        window.location.href = "reportes.html";
+        return;
+      }
+
+      const reporte = JSON.parse(datos);
+      const id = reporte.id;
+
+      try {
+        const res = await fetch(`http://localhost:5000/api/reportes/contenido/${id}`);
+        if (!res.ok) throw new Error("No content");
+
+        const data = await res.json();
+        document.getElementById("preview").innerHTML = data.contenido;
+      } catch (err) {
+        document.getElementById("preview").innerText = "❌ Failed to load report preview.";
+        console.error(err);
+      }
+    });
+  </script>
+</body>
+</html>
+

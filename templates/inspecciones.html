@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inspections Requested</title>
+  <link rel="stylesheet" href="../static/style.css" />
+  <style>
+    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+    th, td { padding: 8px; text-align: center; border: 1px solid #ccc; }
+    th { background-color: #005eb8; color: white; }
+    .contenedor { text-align: center; max-width: 1300px; margin: auto; padding: 20px; }
+    .icon { cursor: pointer; font-size: 18px; }
+    input, textarea { width: 95%; max-width: 250px; }
+  </style>
+</head>
+<body>
+  <div class="contenedor">
+    <h2>List of Inspections Requested</h2>
+
+    <button onclick="window.location.href='home.html'">🏠 Back to Home</button>
+    <button onclick="window.location.href='request_summary.html'">📁 List of Inspections Requested</button><br><br>
+
+    <table id="tabla-inspecciones">
+      <thead>
+        <tr>
+          <th>Activity Nr</th>
+          <th>Report Nr</th>
+          <th>Block</th>
+          <th>Section</th>
+          <th>Scope</th>
+          <th>Send To</th>
+          <th>Kind of Inspection</th>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Meeting Point</th>
+          <th>Additional Information</th>
+          <th>Execute</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <button onclick="enviarGrupo()">📤 Send Request</button>
+    <p id="mensaje-envio" style="color: green;"></p>
+  </div>
+
+  <script>
+    async function cargarInspeccionesEnCurso() {
+      try {
+        const res = await fetch("http://localhost:5000/api/inspecciones_en_curso");
+        const data = await res.json();
+
+        const tbody = document.querySelector("#tabla-inspecciones tbody");
+        tbody.innerHTML = "";
+
+        if (data.length === 0) {
+          document.getElementById("mensaje-envio").innerText = "No pending inspections. Select from Test Plan.";
+          return;
+        }
+
+        data.forEach(item => {
+          const fila = document.createElement("tr");
+          fila.innerHTML = `
+            <td>${item.act}</td>
+            <td>${item.rep}</td>
+            <td>${item.block}</td>
+            <td>${item.section}</td>
+            <td>${item.scope}</td>
+            <td><input type="email" value="${item.email || 'pending@qa.com'}" /></td>
+            <td>${item.kind}</td>
+            <td><input type="date" value="${item.date}" /></td>
+            <td><input type="time" value="${item.time}" /></td>
+            <td><input type="text" value="${item.meeting || ''}" /></td>
+            <td><textarea rows="2" maxlength="500">${item.additional_info || ''}</textarea></td>
+            <td><span class="icon" onclick='generarPreview(${JSON.stringify(item)})'>🖨️</span></td>
+          `;
+          tbody.appendChild(fila);
+        });
+
+      } catch (error) {
+        console.error("❌ Error loading current inspections:", error);
+        document.getElementById("mensaje-envio").innerText = "Failed to load current inspections.";
+      }
+    }
+
+    async function enviarGrupo() {
+      const filas = document.querySelectorAll("#tabla-inspecciones tbody tr");
+      if (filas.length === 0) return alert("No inspections to send.");
+
+      const grupo_envio = Date.now();
+      const solicitudes = [];
+
+      filas.forEach(fila => {
+        const celdas = fila.children;
+        solicitudes.push({
+          act: celdas[0].textContent,
+          rep: celdas[1].textContent,
+          block: celdas[2].textContent,
+          section: celdas[3].textContent,
+          scope: celdas[4].textContent,
+          email: celdas[5].querySelector("input").value,
+          kind: celdas[6].textContent,
+          date: celdas[7].querySelector("input").value,
+          time: celdas[8].querySelector("input").value,
+          meeting: celdas[9].querySelector("input").value,
+          additional_info: celdas[10].querySelector("textarea").value,
+          grupo_envio
+        });
+      });
+
+      const res = await fetch("http://localhost:5000/api/solicitudes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(solicitudes),
+      });
+
+      if (res.ok) {
+        await fetch("http://localhost:5000/api/inspecciones_en_curso", { method: "DELETE" });
+        document.querySelector("#tabla-inspecciones tbody").innerHTML = "";
+        document.getElementById("mensaje-envio").innerText = "✅ Inspections sent and cleared. Waiting for new ones.";
+        setTimeout(() => window.location.href = "request_summary.html", 1000);
+      } else {
+        alert("❌ Failed to send inspections.");
+      }
+    }
+
+    function generarPreview(inspeccion) {
+      localStorage.setItem("reporte_previsualizado", JSON.stringify(inspeccion));
+      window.location.href = "preview_report.html";
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      if (!localStorage.getItem("usuario_logueado")) {
+        alert("Access denied. Please log in.");
+        window.location.href = "login.html";
+        return;
+      }
+
+      cargarInspeccionesEnCurso();
+    });
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

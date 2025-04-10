@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Recycle Bin - Quality System</title>
+  <link rel="stylesheet" href="../static/style.css"/>
+  <style>
+    .contenedor {
+      max-width: 1200px;
+      margin: auto;
+      padding: 20px;
+    }
+    h2 {
+      color: #005eb8;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      padding: 8px;
+      border: 1px solid #ccc;
+      text-align: center;
+    }
+    th {
+      background-color: #005eb8;
+      color: white;
+    }
+    .btn-recover {
+      margin: 10px 0;
+      padding: 10px 20px;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    .seccion {
+      margin-bottom: 50px;
+    }
+  </style>
+</head>
+<body>
+  <div class="contenedor">
+    <h2>🗑️ Recycle Bin</h2>
+    <button onclick="window.location.href='home.html'">🏠 Back to Home</button><br><br>
+
+    <!-- Inspecciones eliminadas -->
+    <div class="seccion">
+      <h3>Deleted Inspections</h3>
+      <table id="tabla-inspecciones">
+        <thead>
+          <tr>
+            <th>Select</th>
+            <th>Title</th>
+            <th>Description</th>
+            <th>Status</th>
+            <th>Deleted At</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <button class="btn-recover" onclick="recoverSelected('inspecciones')">♻️ Recover Selected Inspections</button>
+    </div>
+
+    <!-- Reportes eliminados -->
+    <div class="seccion">
+      <h3>Deleted Reports</h3>
+      <table id="tabla-reportes">
+        <thead>
+          <tr>
+            <th>Select</th>
+            <th>Report Nr</th>
+            <th>Activity Nr</th>
+            <th>Date</th>
+            <th>Scope</th>
+            <th>Kind</th>
+            <th>Status</th>
+            <th>Deleted At</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <button class="btn-recover" onclick="recoverSelected('reportes')">♻️ Recover Selected Reports</button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      if (!localStorage.getItem("usuario_logueado")) {
+        alert("Access denied. Please log in.");
+        window.location.href = "login.html";
+        return;
+      }
+
+      await loadPapelera("inspecciones");
+      await loadPapelera("reportes");
+    });
+
+    async function loadPapelera(tipo) {
+      const res = await fetch(`http://localhost:5000/api/papelera/${tipo}`);
+      const datos = await res.json();
+      const tbody = document.querySelector(`#tabla-${tipo} tbody`);
+      tbody.innerHTML = "";
+
+      datos.forEach(item => {
+        const fila = document.createElement("tr");
+        fila.innerHTML = `
+          <td><input type="checkbox" class="checkbox-${tipo}" data-id="${item.id}"></td>
+          ${
+            tipo === "inspecciones" 
+            ? `<td>${item.titulo}</td><td>${item.descripcion}</td><td>${item.estado}</td><td>${item.eliminado_en}</td>`
+            : `<td>${item.rep}</td><td>${item.act}</td><td>${item.date}</td><td>${item.scope}</td><td>${item.kind}</td><td>${item.status}</td><td>${item.eliminado_en}</td>`
+          }
+        `;
+        tbody.appendChild(fila);
+      });
+    }
+
+    async function recoverSelected(tipo) {
+      const checks = document.querySelectorAll(`.checkbox-${tipo}:checked`);
+      if (checks.length === 0) return alert("Select items to recover.");
+
+      const ids = Array.from(checks).map(c => parseInt(c.dataset.id));
+      const res = await fetch(`http://localhost:5000/api/papelera/recover/${tipo}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids })
+      });
+
+      const data = await res.json();
+      alert(data.mensaje);
+      loadPapelera(tipo);
+    }
+  </script>
+</body>
+</html>

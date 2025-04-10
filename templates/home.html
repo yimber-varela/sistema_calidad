@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Home - Quality Management System</title>
+  <link rel="stylesheet" href="../static/style.css" />
+</head>
+<body>
+  <div class="contenedor">
+    <h2>Welcome to the Quality Management System</h2>
+
+    <button onclick="window.location.href='test_plan.html'">🧪 Inspection & Test Plan</button><br><br>
+    <button onclick="window.location.href='inspecciones.html'">🔍 Inspections Requested</button><br><br>
+    <button onclick="window.location.href='reportes.html'">📋 Inspection Reports</button><br><br>
+    <button onclick="window.location.href='quality_issues.html'">⚠️ Quality Issues</button><br><br>
+    <button onclick="window.location.href='quality_progress.html'">📊 Quality Progress</button><br><br>
+
+    <button onclick="logout()">🔓 Log Out</button>
+  </div>
+
+  <script>
+    // Access protection
+    if (localStorage.getItem("usuario_logueado") !== "true") {
+      alert("Access denied. Please log in first.");
+      window.location.href = "login.html";
+    }
+
+    // Logout function
+    function logout() {
+      localStorage.removeItem("usuario_logueado");
+      window.location.href = "login.html";
+    }
+  </script>
+</body>
+</html>
+
+

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Quality Progress - Quality System</title>
+  <link rel="stylesheet" href="../static/style.css" />
+  <style>
+    .progress-container {
+      margin: 20px auto;
+      max-width: 800px;
+    }
+    .progress-bar {
+      background-color: #eee;
+      border-radius: 5px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    .progress-fill {
+      height: 25px;
+      line-height: 25px;
+      color: white;
+      text-align: center;
+      font-weight: bold;
+    }
+    .inspections { background-color: #28a745; }
+    .reports { background-color: #007bff; }
+    .issues { background-color: #dc3545; }
+    .contenedor { text-align: center; padding: 20px; }
+    h4 span { font-weight: normal; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="contenedor">
+    <h2>📊 Quality Progress Overview</h2>
+    <button onclick="window.location.href='home.html'">🏠 Back to Home</button><br><br>
+
+    <div class="progress-container">
+      <h4>✅ Inspections Completed <span id="ins-count"></span></h4>
+      <div class="progress-bar">
+        <div class="progress-fill inspections" id="ins-fill" style="width: 0%;">0%</div>
+      </div>
+
+      <h4>📘 Reports Created <span id="rep-count"></span></h4>
+      <div class="progress-bar">
+        <div class="progress-fill reports" id="rep-fill" style="width: 0%;">0%</div>
+      </div>
+
+      <h4>🚨 Quality Issues <span id="issue-count"></span></h4>
+      <div class="progress-bar">
+        <div class="progress-fill issues" id="issue-fill" style="width: 0%;">0%</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      if (!localStorage.getItem("usuario_logueado")) {
+        alert("Access denied. Please log in.");
+        window.location.href = "login.html";
+        return;
+      }
+
+      try {
+        const [insRes, repRes, issueRes] = await Promise.all([
+          fetch("http://localhost:5000/api/solicitudes"),
+          fetch("http://localhost:5000/api/reportes"),
+          fetch("http://localhost:5000/api/issues"),
+        ]);
+
+        const inspecciones = await insRes.json();
+        const reportes = await repRes.json();
+        const issues = await issueRes.json();
+
+        // Inspections progreso
+        const totalIns = inspecciones.length;
+        const insDone = inspecciones.filter(i => i.status?.toLowerCase() === "done").length;
+        const insPercent = totalIns ? Math.round((insDone / totalIns) * 100) : 0;
+        document.getElementById("ins-fill").style.width = insPercent + "%";
+        document.getElementById("ins-fill").innerText = insPercent + "%";
+        document.getElementById("ins-count").innerText = `(${insDone}/${totalIns})`;
+
+        // Reports progreso
+        const totalRep = reportes.length;
+        const repDone = reportes.filter(r => r.status?.toLowerCase() === "done").length;
+        const repPercent = totalRep ? Math.round((repDone / totalRep) * 100) : 0;
+        document.getElementById("rep-fill").style.width = repPercent + "%";
+        document.getElementById("rep-fill").innerText = repPercent + "%";
+        document.getElementById("rep-count").innerText = `(${repDone}/${totalRep})`;
+
+        // Quality Issues
+        const totalIssues = issues.length;
+        const openIssues = issues.filter(i => i.status?.toLowerCase() === "open").length;
+        const closedIssues = totalIssues - openIssues;
+        const issuePercent = totalIssues ? Math.round((closedIssues / totalIssues) * 100) : 0;
+        document.getElementById("issue-fill").style.width = issuePercent + "%";
+        document.getElementById("issue-fill").innerText = issuePercent + "%";
+        document.getElementById("issue-count").innerText = `(Closed: ${closedIssues} / Total: ${totalIssues})`;
+
+      } catch (err) {
+        console.error("Error loading quality progress:", err);
+        alert("❌ Failed to load progress data.");
+      }
+    });
+  </script>
+</body>
+</html>
+

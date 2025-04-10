@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inspections Ongoing</title>
+  <link rel="stylesheet" href="../static/style.css" />
+  <style>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ccc;
+      text-align: center;
+    }
+    th {
+      background-color: #005eb8;
+      color: white;
+    }
+    .contenedor {
+      max-width: 1300px;
+      margin: auto;
+      padding: 20px;
+    }
+    .btn-volver {
+      padding: 8px 16px;
+      margin: 10px;
+      background-color: #005eb8;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    .estado {
+      font-weight: bold;
+    }
+    #mensaje-error {
+      color: red;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="contenedor">
+    <h2>Inspections in Progress</h2>
+
+    <button class="btn-volver" onclick="window.location.href='inspecciones.html'">⬅ Back to Requested</button>
+
+    <p id="mensaje-error"></p>
+
+    <table id="tabla-ongoing">
+      <thead>
+        <tr>
+          <th>Activity Nr</th>
+          <th>Report Nr</th>
+          <th>Block</th>
+          <th>Section</th>
+          <th>Scope</th>
+          <th>Kind</th>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Meeting</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      if (!localStorage.getItem("usuario_logueado")) {
+        alert("Access denied. Please log in.");
+        window.location.href = "login.html";
+        return;
+      }
+
+      try {
+        const res = await fetch("http://localhost:5000/api/inspecciones_en_curso");
+        const inspecciones = await res.json();
+
+        if (!res.ok || !Array.isArray(inspecciones)) {
+          throw new Error("Invalid response");
+        }
+
+        const tbody = document.querySelector("#tabla-ongoing tbody");
+        tbody.innerHTML = "";
+
+        inspecciones.forEach((item) => {
+          const fila = document.createElement("tr");
+          fila.innerHTML = `
+            <td>${item.act}</td>
+            <td>${item.rep}</td>
+            <td>${item.block}</td>
+            <td>${item.section}</td>
+            <td>${item.scope}</td>
+            <td>${item.kind}</td>
+            <td>${item.date}</td>
+            <td>${item.time}</td>
+            <td>${item.meeting}</td>
+            <td class="estado">in progress</td>
+          `;
+          tbody.appendChild(fila);
+        });
+      } catch (error) {
+        console.error("❌ Error loading ongoing inspections:", error);
+        document.getElementById("mensaje-error").innerText = "Error loading inspections from server.";
+      }
+    });
+  </script>
+</body>
+</html>
+

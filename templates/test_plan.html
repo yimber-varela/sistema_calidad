@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inspection & Test Plan - Quality System</title>
+  <link rel="stylesheet" href="../static/style.css" />
+  <style>
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 8px; text-align: center; border: 1px solid #ccc; }
+    th { background-color: #005eb8; color: white; }
+    .status { font-weight: bold; border-radius: 5px; color: white; padding: 5px; }
+    .not-started { background-color: gray; }
+    .in-progress { background-color: gold; color: black; }
+    .done { background-color: green; }
+    .cancelled { background-color: red; }
+    .not-applicable { background-color: #333; }
+    input[type="file"] { margin: 15px 0; }
+    .icon-btn { margin: 10px; }
+    #mensaje-envio { font-weight: bold; margin-top: 15px; color: green; }
+  </style>
+</head>
+<body>
+  <div class="contenedor">
+    <h2>Inspection and Test Plan</h2>
+
+    <button onclick="window.location.href='home.html'">🏠 Back to Home</button><br><br>
+
+    <input type="file" id="csvFile" accept=".csv">
+    <button class="icon-btn" onclick="cargarCSV()">📂 Load CSV File</button>
+
+    <button class="icon-btn" onclick="enviarMarcadas()">✅ Request the marked inspections</button>
+    <button class="icon-btn" onclick="eliminarSeleccionadas()">🗑️ Delete selected inspections</button><br><br>
+
+    <table id="tabla-inspecciones">
+      <thead>
+        <tr>
+          <th>Select</th>
+          <th>Activity Nr</th>
+          <th>Block</th>
+          <th>Section</th>
+          <th>Scope</th>
+          <th>Responsible</th>
+          <th>Kind of Inspection</th>
+          <th>Report Nr</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <p id="mensaje-envio"></p>
+  </div>
+
+  <script>
+    async function cargarInspecciones() {
+      const res = await fetch("http://localhost:5000/api/test_plan");
+      const data = await res.json();
+      const tbody = document.querySelector("#tabla-inspecciones tbody");
+      tbody.innerHTML = "";
+
+      data.forEach(item => {
+        const estado = (item.status || "").toLowerCase();
+        const claseEstado = obtenerClaseEstado(estado);
+
+        const fila = document.createElement("tr");
+        fila.setAttribute("data-id", item.id);
+        fila.innerHTML = `
+          <td><input type="checkbox" class="seleccionada" data-id="${item.id}"></td>
+          <td>${item.activity_nr}</td>
+          <td>${item.block}</td>
+          <td>${item.section}</td>
+          <td>${item.scope}</td>
+          <td>${item.responsible}</td>
+          <td>${item.kind}</td>
+          <td>${item.report || "-"}</td>
+          <td><span class="status ${claseEstado}">${item.status}</span></td>
+        `;
+        tbody.appendChild(fila);
+      });
+    }
+
+    function obtenerClaseEstado(estado) {
+      switch (estado) {
+        case "not started": return "not-started";
+        case "in progress": return "in-progress";
+        case "done": return "done";
+        case "cancelled": return "cancelled";
+        case "not applicable": return "not-applicable";
+        default: return "";
+      }
+    }
+
+    async function enviarMarcadas() {
+      const checkboxes = document.querySelectorAll(".seleccionada:checked");
+      if (checkboxes.length === 0) {
+        alert("Please select at least one inspection.");
+        return;
+      }
+
+      const payloadStatus = [];
+      const payloadCurso = [];
+      const idsParaEliminar = [];
+
+      checkboxes.forEach(cb => {
+        const fila = cb.closest("tr");
+        const celdas = fila.children;
+
+        const id = cb.dataset.id;
+        const act = celdas[1].innerText;
+        const block = celdas[2].innerText;
+        const section = celdas[3].innerText;
+        const scope = celdas[4].innerText;
+        const responsible = celdas[5].innerText;
+        const kind = celdas[6].innerText;
+        const rep = celdas[7].innerText;
+        const status = "not started";
+
+        payloadStatus.push({ id, status });
+        payloadCurso.push({
+          act, rep, block, section, scope, kind,
+          email: "pending@qa.com",
+          date: new Date().toISOString().slice(0, 10),
+          time: new Date().toTimeString().slice(0, 5),
+          meeting: "",
+          additional_info: ""
+        });
+
+        idsParaEliminar.push(id);
+      });
+
+      const resStatus = await fetch("http://localhost:5000/api/test_plan/status/batch", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payloadStatus)
+      });
+
+      const resCurso = await fetch("http://localhost:5000/api/inspecciones_en_curso", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payloadCurso)
+      });
+
+      const resDelete = await fetch("http://localhost:5000/api/test_plan", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: idsParaEliminar })
+      });
+
+      if (resStatus.ok && resCurso.ok && resDelete.ok) {
+        document.getElementById("mensaje-envio").innerText = "✅ Inspections sent and removed from view.";
+        cargarInspecciones(); // recargar tabla sin las eliminadas
+      } else {
+        alert("❌ Failed to process selected inspections.");
+      }
+    }
+
+    async function eliminarSeleccionadas() {
+      const seleccionadas = Array.from(document.querySelectorAll(".seleccionada:checked"))
+        .map(cb => cb.dataset.id);
+      if (seleccionadas.length === 0) return alert("Please select at least one inspection.");
+
+      const confirmacion = confirm(`Are you sure you want to delete ${seleccionadas.length} inspections?`);
+      if (!confirmacion) return;
+
+      await fetch("http://localhost:5000/api/test_plan", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: seleccionadas })
+      });
+
+      cargarInspecciones();
+    }
+
+    function cargarCSV() {
+      const archivo = document.getElementById("csvFile").files[0];
+      if (!archivo) return alert("Please select a CSV file.");
+
+      const lector = new FileReader();
+      lector.onload = async (e) => {
+        const lineas = e.target.result.split("\n").filter(l => l.trim());
+        const data = [];
+
+        lineas.forEach((linea, index) => {
+          if (index === 0) return;
+          const [activity_nr, block, section, scope, responsible, kind, report, status] = linea.split(",");
+          if (!activity_nr || !scope) return;
+          data.push({ activity_nr, block, section, scope, responsible, kind, report, status });
+        });
+
+        await fetch("http://localhost:5000/api/test_plan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+
+        alert("✅ CSV loaded successfully.");
+        cargarInspecciones();
+      };
+      lector.readAsText(archivo);
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      cargarInspecciones();
+    });
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
