@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (paginasProtegidas.includes(paginaActual)) {
     try {
-      const res = await fetch("http://localhost:5000/api/verificar_sesion", {
+      const res = await fetch("/api/verificar_sesion", {
         credentials: "include"
       });
       const data = await res.json();
@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const nombre = document.getElementById("nombre").value;
       const contraseña = document.getElementById("contraseña").value;
 
-      const res = await fetch("http://localhost:5000/api/login", {
+      const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -72,9 +72,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const contraseña = document.getElementById("contraseña").value;
       const clave = document.getElementById("clave").value;
 
-      const res = await fetch("http://localhost:5000/api/registro", {
+      const res = await fetch("/api/registro", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ nombre, contraseña, clave }),
       });
 
@@ -100,7 +101,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const titulo = document.getElementById("titulo").value;
       const descripcion = document.getElementById("descripcion").value;
 
-      const res = await fetch("http://localhost:5000/api/inspecciones", {
+      const res = await fetch("/api/inspecciones", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -120,7 +121,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function cargarInspecciones() {
-    const res = await fetch("http://localhost:5000/api/inspecciones", {
+    const res = await fetch("/api/inspecciones", {
       credentials: "include"
     });
     const inspecciones = await res.json();
@@ -153,7 +154,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // ✅ Actualizar estado inspección
 async function actualizarEstado(id, nuevoEstado) {
-  const res = await fetch(`http://localhost:5000/api/inspecciones/${id}`, {
+  const res = await fetch(`/api/inspecciones/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -169,7 +170,7 @@ async function actualizarEstado(id, nuevoEstado) {
 
 // 🔚 Cerrar sesión (puedes llamar esto desde un botón de logout)
 async function cerrarSesion() {
-  const res = await fetch("http://localhost:5000/api/logout", {
+  const res = await fetch("/api/logout", {
     method: "POST",
     credentials: "include"
   });
@@ -180,6 +181,7 @@ async function cerrarSesion() {
     alert("Error al cerrar sesión.");
   }
 }
+
 
 
 
