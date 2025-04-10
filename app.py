@@ -1,9 +1,14 @@
 from flask import Flask, session
+from flask import Flask, render_template
 from flask_cors import CORS
 import os
 
 # Crear la instancia de la app Flask
 app = Flask(__name__)
+
+@app.route('/')
+def login():
+    return render_template('login.html')
 
 # Configurar la clave secreta para sesiones
 app.secret_key = "clave_super_secreta_123"  # Cámbiala en producción
