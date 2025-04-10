@@ -4,6 +4,10 @@ import os
 
 app = Flask(__name__)
 app.secret_key = "clave_super_secreta_123"
+
+app.config['SESSION_COOKIE_SAMESITE'] = 'None'
+app.config['SESSION_COOKIE_SECURE'] = True
+
 CORS(app, supports_credentials=True)
 
 # 🧩 RUTAS PARA SERVIR TUS PÁGINAS HTML
