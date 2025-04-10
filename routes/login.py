@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, session
+from flask import Blueprint, request, jsonify, session, redirect, render_template
 from models import conectar_db
 
 # 🔐 Clave maestra para permitir registros
@@ -6,7 +6,7 @@ CLAVE_SECRETA = "registro2025"
 
 login_bp = Blueprint('login', __name__)
 
-# 🧾 Registro de usuario
+# 🧾 Registro de usuario vía API con JSON (mantener)
 @login_bp.route('/registro', methods=['POST'])
 def registrar_usuario():
     data = request.get_json()
@@ -36,28 +36,26 @@ def registrar_usuario():
     return jsonify({"mensaje": "Usuario registrado correctamente"}), 201
 
 
-# 🔐 Inicio de sesión (almacenar en sesión del servidor)
+# 🔐 Login clásico desde formulario HTML (no JSON)
 @login_bp.route('/login', methods=['POST'])
 def iniciar_sesion():
-    data = request.get_json()
-    nombre = data.get('nombre')
-    contraseña = data.get('contraseña')
+    nombre = request.form.get('usuario')
+    contraseña = request.form.get('contraseña')
 
     if not nombre or not contraseña:
-        return jsonify({"error": "Faltan datos"}), 400
+        return "Faltan datos", 400
 
     con = conectar_db()
     cur = con.cursor()
-
     cur.execute("SELECT * FROM usuarios WHERE nombre = ? AND contraseña = ?", (nombre, contraseña))
     usuario = cur.fetchone()
     con.close()
 
     if usuario:
         session["usuario"] = nombre
-        return jsonify({"mensaje": "Inicio de sesión exitoso"}), 200
+        return redirect("/home")  # redirige a la página principal
     else:
-        return jsonify({"error": "Usuario o contraseña incorrectos"}), 401
+        return render_template("login.html", error="Usuario o contraseña incorrectos")
 
 
 # ✅ Verificar si hay sesión activa
@@ -74,5 +72,6 @@ def verificar_sesion():
 def cerrar_sesion():
     session.pop("usuario", None)
     return jsonify({"mensaje": "Sesión cerrada correctamente"}), 200
+
 
 

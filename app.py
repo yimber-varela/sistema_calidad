@@ -1,20 +1,28 @@
-from flask import Flask, session
-from flask import Flask, render_template
+from flask import Flask, session, render_template, redirect
 from flask_cors import CORS
 import os
 
 # Crear la instancia de la app Flask
 app = Flask(__name__)
 
-@app.route('/')
-def login():
-    return render_template('login.html')
-
 # Configurar la clave secreta para sesiones
 app.secret_key = "clave_super_secreta_123"  # Cámbiala en producción
 
 # Permitir CORS y habilitar credenciales (para que funcionen las cookies)
 CORS(app, supports_credentials=True)
+
+# Ruta inicial (login)
+@app.route('/')
+def login():
+    return render_template('login.html')
+
+# ✅ Ruta protegida para después del login
+@app.route('/home')
+def home():
+    if "usuario" in session:
+        return render_template('home.html')
+    else:
+        return redirect("/")
 
 # Importar y registrar blueprints (rutas)
 from routes.inspecciones import inspecciones_bp
@@ -40,6 +48,7 @@ app.register_blueprint(reporte_editado_bp, url_prefix="/api")
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=True, port=port)
+
 
 
 
