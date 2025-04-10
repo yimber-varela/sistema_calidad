@@ -9,7 +9,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     "/test_plan.html",
     "/preview_report.html",
     "/quality_issues.html",
-    "/inspections_ongoing.html"
+    "/inspections_ongoing.html",
+    "/quality_progress.html"
   ];
 
   if (paginasProtegidas.includes(paginaActual)) {
@@ -90,97 +91,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
-
-// 📋 INSPECCIONES
-document.addEventListener("DOMContentLoaded", () => {
-  const formInspeccion = document.getElementById("form-inspeccion");
-
-  if (formInspeccion) {
-    formInspeccion.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const titulo = document.getElementById("titulo").value;
-      const descripcion = document.getElementById("descripcion").value;
-
-      const res = await fetch("/api/inspecciones", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ titulo, descripcion }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        document.getElementById("mensaje").innerText = "✅ Inspection registered.";
-        formInspeccion.reset();
-        cargarInspecciones();
-      } else {
-        document.getElementById("mensaje").innerText = "❌ Error registering inspection.";
-      }
-    });
-  }
-
-  async function cargarInspecciones() {
-    const res = await fetch("/api/inspecciones", {
-      credentials: "include"
-    });
-    const inspecciones = await res.json();
-
-    const tbody = document.querySelector("#tabla-inspecciones tbody");
-    if (!tbody) return;
-
-    tbody.innerHTML = "";
-
-    inspecciones.forEach((item) => {
-      const fila = document.createElement("tr");
-      fila.innerHTML = `
-        <td>${item.id}</td>
-        <td>${item.titulo}</td>
-        <td>${item.descripcion}</td>
-        <td>
-          <select onchange="actualizarEstado(${item.id}, this.value)">
-            <option value="pendiente" ${item.estado === "pendiente" ? "selected" : ""}>Pending</option>
-            <option value="en ejecucion" ${item.estado === "en ejecucion" ? "selected" : ""}>In Progress</option>
-            <option value="finalizado" ${item.estado === "finalizado" ? "selected" : ""}>Done</option>
-          </select>
-        </td>
-      `;
-      tbody.appendChild(fila);
-    });
-  }
-
-  cargarInspecciones();
-});
-
-// ✅ Actualizar estado inspección
-async function actualizarEstado(id, nuevoEstado) {
-  const res = await fetch(`/api/inspecciones/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ estado: nuevoEstado }),
-  });
-
-  if (res.ok) {
-    console.log(`✅ Inspection ${id} updated to ${nuevoEstado}`);
-  } else {
-    alert("❌ Error updating status.");
-  }
-}
-
-// 🔚 Cerrar sesión (puedes llamar esto desde un botón de logout)
-async function cerrarSesion() {
-  const res = await fetch("/api/logout", {
-    method: "POST",
-    credentials: "include"
-  });
-
-  if (res.ok) {
-    window.location.href = "login.html";
-  } else {
-    alert("Error al cerrar sesión.");
-  }
-}
 
 
 
